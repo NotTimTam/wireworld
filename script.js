@@ -3,7 +3,7 @@ const canvas = document.getElementById("display");
 const ctx = canvas.getContext("2d");
 let size = 25;
 let game = [];
-let colors = ["#00000000", "#073b4c", "#ef476f", "#ffd166"];
+let colors = ["#00000000", "#4555e4", "#ef476f", "#ffd166"];
 // 0 = empty, 1 = electron head, 2 = electron tail, 3 = connector.
 
 function display(array) {
@@ -143,49 +143,64 @@ function getNeighbors(x, y) {
 // ES6 for counting occurences of value in array.
 const countOccurrences = (arr, val) => arr.reduce((a, v) => (v === val ? a + 1 : a), 0);
 
-function setStatus(x, y) {
-    // Get the given cells living neighbor count.
-    let neighbors = getNeighbors(x, y);
-
-    // Get the given cells current state.
-    let cellStatus = game[y][x];
-    // 0 = empty, 1 = electron head, 2 = electron tail, 3 = connector.
-
-    // Run through the rules and see which apply. Note that there is a one in 100 chance of a cell not being the same color as its parents.
-    switch(cellStatus) {
-        case 1:
-            // If head.
-            game[y][x] = 2;
-            break;
-        case 2:
-            // If tail.
-            game[y][x] = 3;
-            break;
-        case 3:
-            // If connector.
-            if (countOccurrences(neighbors, 1) == 1 || countOccurrences(neighbors, 1) == 2) {
-                game[y][x] = 1;
-            } else {
-                game[y][x] = 3;
-            }
-            break;
-        default:
-            break;
-    }
-}
-
 let canRunIter = true;
 function runIteration() {
     if (canRunIter) {
         // Run through and set the status of every element in the game.
         canRunIter = false;
+
+        // Create lists of items that need to be changed.
+        let headsToTails = [];
+        let tailsToConnectors = [];
+        let connectorsToHeads = [];
         
         // Loop through each column in each row, check the status of the cell in that position.
         for (let row = 0; row < game.length; row++) {
             for (let column = 0; column < game[row].length; column++) {
-                setStatus(column, row);
+                // Get the given cells living neighbor count.
+                let neighbors = getNeighbors(column, row);
+
+                // Get the given cells current state.
+                let cellStatus = game[row][column];
+                // 0 = empty, 1 = electron head, 2 = electron tail, 3 = connector.
+
+                // Run through the rules and see which apply. Note that there is a one in 100 chance of a cell not being the same color as its parents.
+                switch(cellStatus) {
+                    case 1:
+                        // If head.
+                        headsToTails.push([column, row]);
+                        break;
+                    case 2:
+                        // If tail.
+                        tailsToConnectors.push([column, row]);
+                        break;
+                    case 3:
+                        // If connector.
+                        if (countOccurrences(neighbors, 1) == 1 || countOccurrences(neighbors, 1) == 2) {
+                            connectorsToHeads.push([column, row]);
+                        }
+                        break;
+                    default:
+                        break;
+                }
             }
         }
+
+        // Convert all (required) connectors to heads.
+        for (let i = 0; i < connectorsToHeads.length; i++) {
+            game[connectorsToHeads[i][1]][connectorsToHeads[i][0]] = 1;
+        }
+
+        // Convert all tails to connectors.
+        for (let i = 0; i < tailsToConnectors.length; i++) {
+            game[tailsToConnectors[i][1]][tailsToConnectors[i][0]] = 3;
+        }
+
+        // Convert all heads to tails.
+        for (let i = 0; i < headsToTails.length; i++) {
+            game[headsToTails[i][1]][headsToTails[i][0]] = 2;
+        }
+
 
         display(game);
 
